@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <!-- Hexagonal background -->
+  <path d="M60 8L105 33V83L60 108L15 83V33L60 8Z"
+        fill="url(#logoGradBg)"
+        stroke="url(#logoGradStroke)"
+        stroke-width="2"/>
+
+  <!-- Inner hex ring -->
+  <path d="M60 20L95 40V80L60 100L25 80V40L60 20Z"
+        fill="none"
+        stroke="url(#logoGradStroke)"
+        stroke-width="0.8"
+        opacity="0.4"/>
+
+  <!-- Crown / GP monogram -->
+  <text x="60" y="72"
+        text-anchor="middle"
+        fill="white"
+        font-size="32"
+        font-weight="700"
+        font-family="'Libre Baskerville', Georgia, serif"
+        letter-spacing="2">GP</text>
+
+  <!-- Bottom tagline -->
+  <text x="60" y="88"
+        text-anchor="middle"
+        fill="rgba(255,255,255,0.6)"
+        font-size="7"
+        font-family="'Outfit', sans-serif"
+        letter-spacing="3">SINCE 1985</text>
+
+  <!-- Gradient definitions -->
+  <defs>
+    <linearGradient id="logoGradBg" x1="15" y1="8" x2="105" y2="108" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#C9A84C"/>
+      <stop offset="50%"  stop-color="#8B6914"/>
+      <stop offset="100%" stop-color="#C9A84C"/>
+    </linearGradient>
+    <linearGradient id="logoGradStroke" x1="15" y1="8" x2="105" y2="108" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#E8C96A"/>
+      <stop offset="100%" stop-color="#C9A84C"/>
+    </linearGradient>
+  </defs>
+</svg>

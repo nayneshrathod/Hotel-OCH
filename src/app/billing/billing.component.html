@@ -1,0 +1,463 @@
+<!-- billing.component.html — Hotel OCH Cash Memo Format -->
+<div class="app-shell">
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!-- TOP NAV BAR                                                            -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <header class="top-nav no-print">
+    <div class="nav-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 40 40" fill="none">
+          <circle cx="20" cy="20" r="18" fill="url(#navGrad)" />
+          <text x="20" y="26" text-anchor="middle" fill="white" font-size="13" font-weight="800"
+            font-family="serif">OCH</text>
+          <defs>
+            <linearGradient id="navGrad" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#7C3AED" />
+              <stop offset="100%" stop-color="#4F46E5" />
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <span class="brand-name">Hotel OCH</span>
+        <span class="brand-sub">Billing System</span>
+      </div>
+    </div>
+    <div class="nav-info">
+      <div class="nav-bill-badge">
+        <span class="badge-label">BILL</span>
+        <span class="badge-no">{{ billNo() }}</span>
+      </div>
+      <div class="nav-datetime">
+        <span>{{ formattedDate() }}</span>
+        <span class="time-sep">|</span>
+        <span>{{ formattedTime() }}</span>
+      </div>
+    </div>
+    <div class="nav-actions">
+      <button class="btn-nav btn-clear" (click)="clearBill()" id="newBillBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+        New Bill
+      </button>
+      <button class="btn-nav btn-save" (click)="saveBill()" [disabled]="isSaving() || items().length === 0"
+        id="saveBillBtn">
+        @if (isSaving()) {
+        <span class="spinner-sm"></span> Saving...
+        } @else {
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
+          <polyline points="17,21 17,13 7,13 7,21" />
+          <polyline points="7,3 7,8 15,8" />
+        </svg>
+        Save Bill
+        }
+      </button>
+      <!-- <button class="btn-nav btn-print" (click)="printBill()" [disabled]="items().length === 0" id="printBillBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="6,9 6,2 18,2 18,9" />
+          <path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2" />
+          <rect x="6" y="14" width="12" height="8" />
+        </svg>
+        Print
+      </button> -->
+      <button class="btn-nav btn-image no-print" (click)="downloadReceiptImage()" [disabled]="items().length === 0"
+        id="downloadImageBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="7 10 12 15 17 10" />
+          <line x1="12" y1="15" x2="12" y2="3" />
+        </svg>
+        Image
+      </button>
+      <!-- <button class="btn-nav btn-pdf no-print" (click)="downloadReceiptPdf()" [disabled]="items().length === 0"
+        id="downloadPdfBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <polyline points="14 2 14 8 20 8" />
+          <line x1="16" y1="13" x2="8" y2="13" />
+          <line x1="16" y1="17" x2="8" y2="17" />
+          <polyline points="10 9 9 9 8 9" />
+        </svg>
+        PDF
+      </button> -->
+      <button class="btn-nav btn-stamp no-print" (click)="randomizeStamp()" id="stampBillBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path
+            d="M12 2a3 3 0 0 0-3 3v3H6a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-3V5a3 3 0 0 0-3-3z" />
+          <line x1="8" y1="18" x2="16" y2="18" />
+        </svg>
+        Stamp
+      </button>
+    </div>
+  </header>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!-- TOASTS                                                                 -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  @if (showSuccessToast()) {
+  <div class="toast toast-success no-print" role="alert">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
+      <polyline points="22,4 12,14.01 9,11.01" />
+    </svg>
+    Bill <strong>{{ billNo() }}</strong> saved to Firebase!
+  </div>
+  }
+  @if (showErrorToast()) {
+  <div class="toast toast-error no-print" role="alert">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="12" y1="8" x2="12" y2="12" />
+      <line x1="12" y1="16" x2="12.01" y2="16" />
+    </svg>
+    {{ errorMessage() }}
+  </div>
+  }
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!-- SPLIT LAYOUT                                                            -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <main class="split-layout">
+
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <!-- LEFT PANEL                                                            -->
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <aside class="left-panel no-print" [class.mobile-hidden]="activeMobileTab() !== 'editor'">
+
+      <!-- Menu Selector -->
+      <section class="card menu-card">
+        <h3 class="card-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 3h18v4H3zM3 10h18M3 17h18" />
+          </svg>
+          Menu
+          <span class="menu-count-badge">{{ menuService.filteredItems().length }} items</span>
+        </h3>
+
+        <!-- Search -->
+        <div class="search-wrapper">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input type="search" id="menuSearch" placeholder="Search dishes..." class="search-input"
+            (input)="setSearch($event)" />
+        </div>
+
+        <!-- Category Tabs -->
+        <div class="category-tabs" role="tablist">
+          @for (cat of menuService.categories(); track cat) {
+          <button class="cat-tab" [class.active]="activeCategory() === cat" (click)="setCategory(cat)" role="tab">{{ cat
+            }}</button>
+          }
+        </div>
+
+        <!-- Menu Grid -->
+        <div class="menu-grid" role="list">
+          @if (menuService.filteredItems().length === 0) {
+          <div class="empty-menu">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <p>No items found</p>
+          </div>
+          } @else {
+          @for (item of menuService.filteredItems(); track item.id) {
+          <button class="menu-item-card" [class.selected]="selectedMenuItem()?.id === item.id"
+            (click)="selectMenuItem(item)" role="listitem">
+            <div class="menu-item-header">
+              <span class="veg-dot" [class.non-veg-dot]="!item.isVeg"></span>
+              <span class="item-cat">{{ item.category }}</span>
+            </div>
+            <div class="item-name">{{ item.name }}</div>
+            <div class="item-footer-row">
+              <span class="item-price">₹{{ item.price }}</span>
+              <span class="item-unit">/ {{ item.unit }}</span>
+            </div>
+          </button>
+          }
+          }
+        </div>
+      </section>
+
+      <!-- Add Item Form -->
+      @if (selectedMenuItem()) {
+      <section class="card add-item-card">
+        <div class="selected-preview">
+          <div class="sel-details">
+            <div class="sel-name">{{ selectedMenuItem()!.name }}</div>
+            <div class="sel-price">₹{{ selectedMenuItem()!.price }} / {{ selectedMenuItem()!.unit }}</div>
+          </div>
+        </div>
+        <div class="qty-row">
+          <div class="qty-control">
+            <button class="qty-btn" (click)="quantity.set(Math.max(1, quantity() - 1))">−</button>
+            <input type="number" id="qtyInput" class="qty-input" min="1" [ngModel]="quantity()"
+              (ngModelChange)="quantity.set($event)" />
+            <button class="qty-btn" (click)="quantity.set(quantity() + 1)">+</button>
+          </div>
+          <div class="preview-amt">
+            <span class="amt-lbl">Total</span>
+            <span class="amt-val">₹{{ previewAmount() }}</span>
+          </div>
+          <button class="btn-add-item" (click)="addItem()" id="addItemBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Add to Bill
+          </button>
+        </div>
+      </section>
+      }
+
+      <!-- Live Summary -->
+      @if (items().length > 0) {
+      <section class="card summary-card">
+        <h3 class="card-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="8" y1="6" x2="21" y2="6" />
+            <line x1="8" y1="12" x2="21" y2="12" />
+            <line x1="8" y1="18" x2="21" y2="18" />
+            <line x1="3" y1="6" x2="3.01" y2="6" />
+            <line x1="3" y1="12" x2="3.01" y2="12" />
+            <line x1="3" y1="18" x2="3.01" y2="18" />
+          </svg>
+          {{ items().length }} Item(s) · {{ totalItems }} Qty
+        </h3>
+        <div class="summary-items">
+          @for (item of items(); track item.id; let i = $index) {
+          <div class="summary-row">
+            <div class="sum-left">
+              <span class="veg-dot sm" [class.non-veg-dot]="!item.menuItem.isVeg"></span>
+              <span class="s-name">{{ item.menuItem.name }}</span>
+            </div>
+            <div class="sum-right">
+              <button class="icon-btn" (click)="updateItemQuantity(i, item.quantity - 1)">−</button>
+              <span class="s-qty">{{ item.quantity }}</span>
+              <button class="icon-btn" (click)="updateItemQuantity(i, item.quantity + 1)">+</button>
+              <span class="s-amt">₹{{ item.amount }}</span>
+              <button class="icon-btn danger" (click)="removeItem(i)" title="Remove">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3,6 5,6 21,6" />
+                  <path d="M19,6l-1,14a2,2,0,01-2,2H8a2,2,0,01-2-2L5,6" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          }
+        </div>
+        <div class="summary-totals">
+          <div class="s-row"><span>Sub Total</span><span>₹{{ subtotal() }}.00</span></div>
+          <div class="s-row"><span>CGST @2.5%</span><span>₹{{ cgstAmount().toFixed(2) }}</span></div>
+          <div class="s-row"><span>SGST @2.5%</span><span>₹{{ sgstAmount().toFixed(2) }}</span></div>
+          <div class="s-row s-grand"><span>TOTAL</span><span>₹{{ grandTotal() }}</span></div>
+        </div>
+      </section>
+      }
+
+      <!-- Bill Header Fields -->
+      <section class="card bill-details-card">
+        <h3 class="card-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+            <polyline points="14,2 14,8 20,8" />
+          </svg>
+          Bill Details
+        </h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="tableNo">Table No.</label>
+            <input id="tableNo" type="text" placeholder="22-D" [ngModel]="tableNo()"
+              (ngModelChange)="tableNo.set($event)" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label for="empName">Emp. Name</label>
+            <input id="empName" type="text" placeholder="NAFIS" [ngModel]="waiterName()"
+              (ngModelChange)="waiterName.set($event)" class="form-input" />
+          </div>
+          <!-- Date and Time Modification Fields -->
+          <div class="form-group col-span-2">
+            <label for="billDateTime">Bill Date &amp; Time</label>
+            <input id="billDateTime" type="datetime-local" [ngModel]="billDateInput()"
+              (ngModelChange)="updateBillDate($event)" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label for="billNumber">Bill No. Override</label>
+            <input id="billNumber" type="text" placeholder="OCH-0110" [ngModel]="billNo()"
+              (ngModelChange)="billNo.set($event)" class="form-input" />
+          </div>
+          <div class="form-group">
+            <label for="custName">Customer</label>
+            <input id="custName" type="text" placeholder="Walk-in" [ngModel]="customerName()"
+              (ngModelChange)="customerName.set($event)" class="form-input" />
+          </div>
+        </div>
+      </section>
+    </aside>
+
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <!-- RIGHT PANEL — THERMAL RECEIPT PREVIEW                               -->
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <section class="right-panel" [class.mobile-hidden]="activeMobileTab() !== 'preview'">
+      <div class="preview-label no-print">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+          <circle cx="12" cy="12" r="3" />
+        </svg>
+        Live Preview — Cash Memo
+      </div>
+
+      <!-- ══ THERMAL RECEIPT (Print Target) ══ -->
+      <div class="receipt-wrapper print-area" id="printArea">
+
+        <!-- Authentic Rubber Purple Stamp overlay (Bottom-Left Shifted) -->
+        <div class="receipt-stamp" [style.top]="stampTop()" [style.bottom]="stampBottom()" [style.left]="stampLeft()"
+          [style.transform]="'translate(-50%, 0) rotate(' + stampRotation() + 'deg)'">
+          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <!-- <circle cx="50" cy="50" r="42" stroke="#5753ac" stroke-width="3.5" fill="none" stroke-dasharray="0" /> -->
+            <circle cx="50" cy="50" r="35" stroke="#5753ac" stroke-width="3" fill="none" />
+            <text x="50" y="66" font-family="'Arial Black', Impact, sans-serif" font-size="44" font-weight="900"
+              fill="blue" text-anchor="middle">P</text>
+          </svg>
+        </div>
+
+        <!-- HOTEL HEADER -->
+        <div class="receipt-header">
+          <div class="hotel-name">HOTEL OCH</div>
+          <div class="hotel-tagline">Vistarit Amdar Nivas Uphargruha</div>
+          <div class="hotel-addr">Near Lion Gate,SBS Rd</div>
+          <div class="hotel-addr">Colaba,Mumbai 400039</div>
+          <div class="hotel-phone">Ph:{{ hotelInfo.phone }}</div>
+          <div class="receipt-dash-line">------------- Cash Memo -------------</div>
+        </div>
+
+        <!-- META ROW (Double column aligned) -->
+        <div class="receipt-meta">
+          <div class="meta-col-left">
+            <div class="meta-line">Date : {{ formattedDate() }}</div>
+            <div class="meta-line">T.No.: {{ tableNo() || '15-A' }}</div>
+          </div>
+          <div class="meta-col-right">
+            <div class="meta-line">Bill No. : {{ billNo().split('-').pop() }}</div>
+            <div class="meta-line">Emp. No. : {{ waiterName() || 'Suraj' }}</div>
+          </div>
+        </div>
+
+        <div class="receipt-dash-line">----------------------------------------</div>
+
+        <!-- ITEMS TABLE HEADER -->
+        <div class="items-header-row">
+          <span class="col-particular">Particulars</span>
+          <span class="col-qty">Qty</span>
+          <span class="col-rate">Rate</span>
+          <span class="col-amount">Amount</span>
+        </div>
+
+        <div class="receipt-dash-line">----------------------------------------</div>
+
+        <!-- ITEMS BODY -->
+        <div class="items-body">
+          @if (items().length === 0) {
+          <div class="empty-receipt">
+            <p>Add items from the menu...</p>
+          </div>
+          } @else {
+          @for (item of items(); track item.id; let i = $index) {
+          <div class="receipt-item-row">
+            <div class="item-row-main">
+              <span class="col-particular font-receipt-item">{{ item.menuItem.name | uppercase }}</span>
+              <span class="col-qty">{{ item.quantity }}</span>
+              <span class="col-rate">{{ item.rate }}</span>
+              <span class="col-amount">{{ item.amount }}</span>
+            </div>
+          </div>
+          }
+          }
+        </div>
+        <div class="short-dash-row">
+          <span class="short-dash">--------------</span>
+        </div>
+
+
+        <!-- TOTALS SECTION -->
+        <div class="totals-section">
+          <div class="totals-row">
+            <span class="totals-label">Sub Total :</span>
+            <span class="totals-value">{{ subtotal() }}.00</span>
+          </div>
+          <div class="totals-row">
+            <span class="totals-label">CGST &#64;2.5% On {{ subtotal() }} :</span>
+            <span class="totals-value">{{ cgstAmount().toFixed(2) }}</span>
+          </div>
+          <div class="totals-row">
+            <span class="totals-label">SGST &#64;2.5% On {{ subtotal() }} :</span>
+            <span class="totals-value">{{ sgstAmount().toFixed(2) }}</span>
+          </div>
+
+          <div class="short-dash-row">
+            <span class="short-dash">--------------</span>
+          </div>
+
+          <div class="totals-row food-total-row">
+            <span class="totals-label">Food Total :</span>
+            <span class="totals-value">{{ totalBeforeRound().toFixed(2) }}</span>
+          </div>
+
+          <div class="receipt-dash-line">----------------------------------------</div>
+
+          <div class="grand-total-row">
+            <span class="covers-info">{{ items().length }}/{{ totalItems }}</span>
+            <span class="grand-label">Total Rs :</span>
+            <span class="grand-amount">{{ grandTotal() }}</span>
+          </div>
+        </div>
+
+        <div class="receipt-dash-line">----------------------------------------</div>
+
+        <!-- FOOTER -->
+        <div class="receipt-footer">
+          <div class="footer-fssai-row">
+            <span>FSSAI NO. {{ hotelInfo.fssai }}</span>
+            <span class="footer-time-val">({{ formattedTime() }})</span>
+          </div>
+          <div class="footer-gstin">GSTIN.{{ hotelInfo.gstin }}</div>
+          <div class="footer-thanks">
+            <span>E.&amp;O.E.</span>
+            <span>Thank You</span>
+            <span>Visit Again</span>
+          </div>
+        </div>
+
+      </div><!-- end .receipt-wrapper -->
+    </section>
+
+  </main>
+
+  <!-- Mobile Tab Navigation Bar -->
+  <div class="mobile-tabs no-print">
+    <button class="mobile-tab-btn" [class.active]="activeMobileTab() === 'editor'"
+      (click)="activeMobileTab.set('editor')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        style="width: 16px; height: 16px; margin-right: 6px; display: inline-block; vertical-align: middle;">
+        <path d="M12 20h9" />
+        <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+      </svg>
+      Bill Editor
+    </button>
+    <button class="mobile-tab-btn" [class.active]="activeMobileTab() === 'preview'"
+      (click)="activeMobileTab.set('preview')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        style="width: 16px; height: 16px; margin-right: 6px; display: inline-block; vertical-align: middle;">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+        <polyline points="14 2 14 8 20 8" />
+      </svg>
+      Receipt Preview
+    </button>
+  </div>
+</div>

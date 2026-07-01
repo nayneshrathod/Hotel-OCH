@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Hotel OCH — Billing System</title>
+  <meta name="description" content="Hotel OCH POS Billing System — Cash Memo Generator"/>
+  <link rel="icon" type="image/svg+xml" href="hotel-logo.svg"/>
+  <base href="/"/>
+  <script>
+    // Intercept uncaught errors and display them on screen for debugging
+    window.addEventListener('error', function(event) {
+      var errDiv = document.getElementById('runtime-error-display');
+      if (!errDiv) {
+        errDiv = document.createElement('div');
+        errDiv.id = 'runtime-error-display';
+        errDiv.style.position = 'fixed';
+        errDiv.style.top = '0';
+        errDiv.style.left = '0';
+        errDiv.style.width = '100%';
+        errDiv.style.background = '#EF4444';
+        errDiv.style.color = '#FFFFFF';
+        errDiv.style.padding = '12px';
+        errDiv.style.zIndex = '999999';
+        errDiv.style.fontFamily = 'monospace';
+        errDiv.style.fontSize = '12px';
+        errDiv.style.boxShadow = '0 4px 12px rgba(0,0,0,0.5)';
+        errDiv.style.whiteSpace = 'pre-wrap';
+        document.body.appendChild(errDiv);
+      }
+      errDiv.innerText += '\n[ERROR] ' + event.message + ' at ' + event.filename + ':' + event.lineno;
+    });
+
+    window.addEventListener('unhandledrejection', function(event) {
+      var errDiv = document.getElementById('runtime-error-display');
+      if (!errDiv) {
+        errDiv = document.createElement('div');
+        errDiv.id = 'runtime-error-display';
+        errDiv.style.position = 'fixed';
+        errDiv.style.top = '0';
+        errDiv.style.left = '0';
+        errDiv.style.width = '100%';
+        errDiv.style.background = '#EF4444';
+        errDiv.style.color = '#FFFFFF';
+        errDiv.style.padding = '12px';
+        errDiv.style.zIndex = '999999';
+        errDiv.style.fontFamily = 'monospace';
+        errDiv.style.fontSize = '12px';
+        errDiv.style.boxShadow = '0 4px 12px rgba(0,0,0,0.5)';
+        errDiv.style.whiteSpace = 'pre-wrap';
+        document.body.appendChild(errDiv);
+      }
+      errDiv.innerText += '\n[PROMISE REJECTION] ' + (event.reason ? event.reason.message || event.reason : 'Unknown reason');
+    });
+  </script>
+  <link rel="manifest" href="manifest.webmanifest">
+</head>
+<body>
+  <app-root></app-root>
+  <noscript>Please enable JavaScript to continue using this application.</noscript>
+</body>
+</html>
