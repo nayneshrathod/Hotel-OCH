@@ -2,6 +2,8 @@
 
 Developed for **Hotel OCH (Vistarit Amdar Nivas Uphargruha)**, this is a modern, high-performance web-based Point of Sale (POS) and Billing System built with **Angular 22** using reactive programming, signals, and modern CSS layout techniques. It integrates with Firebase for real-time data persistence and background media upload.
 
+🌐 **Live Demo:** [https://hotelbilloch.web.app](https://hotelbilloch.web.app)
+
 ---
 
 ## 🚀 Features
