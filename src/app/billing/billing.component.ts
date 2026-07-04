@@ -70,6 +70,15 @@ export class BillingComponent implements OnInit {
   readonly selectedMenuItem = signal<MenuItem | null>(null);
   readonly quantity = signal<number>(1);
   readonly notes = signal<string>('');
+  readonly isCrumpled = signal<boolean>(false);
+  readonly crumpleSeed = signal<number>(0);
+  readonly crumpleDeg1 = signal<number>(135);
+  readonly crumpleDeg2 = signal<number>(25);
+  readonly crumpleDeg3 = signal<number>(-65);
+  readonly crumpleBg = signal<string>('');
+  readonly crumpleClip = signal<string>('none');
+  readonly isParcel = signal<boolean>(false);
+  private prevTableNo = '9';
 
   // ── Invoice Items ──────────────────────────────────────────────────────────
   readonly items = signal<InvoiceItem[]>([]);
@@ -303,6 +312,120 @@ export class BillingComponent implements OnInit {
     }
   }
 
+  onParcelToggle(checked: boolean): void {
+    this.isParcel.set(checked);
+    if (checked) {
+      if (this.tableNo() !== 'Parcel') {
+        this.prevTableNo = this.tableNo();
+      }
+      this.tableNo.set('Parcel');
+    } else {
+      this.tableNo.set(this.prevTableNo || '9');
+    }
+  }
+
+  private async getModifiedSvg(svgDataUrl: string): Promise<string> {
+    let svgContent = '';
+    const base64Prefix = 'data:image/svg+xml;base64,';
+    const utf8Prefix = 'data:image/svg+xml;charset=utf-8,';
+
+    if (svgDataUrl.startsWith(base64Prefix)) {
+      svgContent = atob(svgDataUrl.substring(base64Prefix.length));
+    } else if (svgDataUrl.startsWith(utf8Prefix)) {
+      svgContent = decodeURIComponent(svgDataUrl.substring(utf8Prefix.length));
+    } else {
+      return svgDataUrl;
+    }
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(svgContent, 'image/svg+xml');
+    const svgEl = doc.querySelector('svg');
+    if (!svgEl) return svgDataUrl;
+
+    // Remove inner filter style from the printArea element inside the foreignObject to avoid double distortion
+    const receiptWrapper = doc.getElementById('printArea');
+    if (receiptWrapper) {
+      let styleAttr = receiptWrapper.getAttribute('style') || '';
+      styleAttr = styleAttr.replace(/filter:\s*[^;]+;?/g, '');
+      receiptWrapper.setAttribute('style', styleAttr);
+    }
+
+    if (this.isCrumpled()) {
+      // Create defs and filter
+      const defs = doc.createElementNS('http://www.w3.org/2000/svg', 'defs');
+      const filter = doc.createElementNS('http://www.w3.org/2000/svg', 'filter');
+      filter.setAttribute('id', 'crumple-filter-outer');
+      filter.setAttribute('x', '-10%');
+      filter.setAttribute('y', '-10%');
+      filter.setAttribute('width', '120%');
+      filter.setAttribute('height', '120%');
+
+      const turbulence = doc.createElementNS('http://www.w3.org/2000/svg', 'feTurbulence');
+      turbulence.setAttribute('type', 'fractalNoise');
+      turbulence.setAttribute('baseFrequency', '0.04');
+      turbulence.setAttribute('numOctaves', '3');
+      turbulence.setAttribute('result', 'noise');
+      turbulence.setAttribute('seed', String(this.crumpleSeed()));
+
+      const displacement = doc.createElementNS('http://www.w3.org/2000/svg', 'feDisplacementMap');
+      displacement.setAttribute('in', 'SourceGraphic');
+      displacement.setAttribute('in2', 'noise');
+      displacement.setAttribute('scale', '2.5');
+      displacement.setAttribute('xChannelSelector', 'R');
+      displacement.setAttribute('yChannelSelector', 'G');
+
+      filter.appendChild(turbulence);
+      filter.appendChild(displacement);
+      defs.appendChild(filter);
+      svgEl.insertBefore(defs, svgEl.firstChild);
+
+      // Wrap foreignObject inside a <g filter="url(#crumple-filter-outer)">
+      const foreignObject = svgEl.querySelector('foreignObject');
+      if (foreignObject) {
+        const g = doc.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.setAttribute('filter', 'url(#crumple-filter-outer)');
+        svgEl.replaceChild(g, foreignObject);
+        g.appendChild(foreignObject);
+      }
+    }
+
+    const serializer = new XMLSerializer();
+    const serialized = serializer.serializeToString(doc);
+    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(serialized);
+  }
+
+  private async svgToPngDataUrl(element: HTMLElement): Promise<string> {
+    const htmlToImage = await import('html-to-image');
+    const svgDataUrl = await htmlToImage.toSvg(element, {
+      backgroundColor: '#FEFEFA',
+      style: {
+        width: '320px',
+        minWidth: '320px',
+        maxWidth: '320px'
+      }
+    });
+
+    const modifiedSvg = await this.getModifiedSvg(svgDataUrl);
+
+    const img = new Image();
+    img.src = modifiedSvg;
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+    });
+
+    const canvas = document.createElement('canvas');
+    const scale = 2.5;
+    canvas.width = img.width * scale;
+    canvas.height = img.height * scale;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Could not get canvas context');
+    ctx.scale(scale, scale);
+    ctx.drawImage(img, 0, 0);
+
+    return canvas.toDataURL('image/png');
+  }
+
   // ── Print ─────────────────────────────────────────────────────────────────
   printBill(): void { window.print(); }
 
@@ -311,25 +434,10 @@ export class BillingComponent implements OnInit {
     if (!element) return;
 
     try {
-      const html2canvas = (await import('html2canvas')).default;
-      const canvas = await html2canvas(element, {
-        scale: 2.5,
-        useCORS: true,
-        backgroundColor: '#FEFEFA',
-        onclone: (clonedDoc) => {
-          const clonedElement = clonedDoc.getElementById('printArea');
-          if (clonedElement) {
-            clonedElement.style.width = '320px';
-            clonedElement.style.minWidth = '320px';
-            clonedElement.style.maxWidth = '320px';
-          }
-        }
-      });
-
-      const dataUrl = canvas.toDataURL('image/png');
+      const pngDataUrl = await this.svgToPngDataUrl(element);
       const link = document.createElement('a');
       link.download = `${this.billNo()}.png`;
-      link.href = dataUrl;
+      link.href = pngDataUrl;
       link.click();
     } catch (error) {
       console.error('Error generating receipt image:', error);
@@ -341,27 +449,16 @@ export class BillingComponent implements OnInit {
     if (!element) return;
 
     try {
-      const html2canvas = (await import('html2canvas')).default;
+      const pngDataUrl = await this.svgToPngDataUrl(element);
       const { jsPDF } = await import('jspdf');
 
-      const canvas = await html2canvas(element, {
-        scale: 2.5,
-        useCORS: true,
-        backgroundColor: '#FEFEFA',
-        onclone: (clonedDoc) => {
-          const clonedElement = clonedDoc.getElementById('printArea');
-          if (clonedElement) {
-            clonedElement.style.width = '320px';
-            clonedElement.style.minWidth = '320px';
-            clonedElement.style.maxWidth = '320px';
-          }
-        }
-      });
+      const img = new Image();
+      img.src = pngDataUrl;
+      await new Promise((resolve) => (img.onload = resolve));
 
-      const imgWidthPx = canvas.width;
-      const imgHeightPx = canvas.height;
+      const imgWidthPx = img.width;
+      const imgHeightPx = img.height;
 
-      // Convert px to points at original scale
       const widthPt = (imgWidthPx * 0.75) / 2.5;
       const heightPt = (imgHeightPx * 0.75) / 2.5;
 
@@ -371,8 +468,7 @@ export class BillingComponent implements OnInit {
         format: [widthPt, heightPt],
       });
 
-      const imgData = canvas.toDataURL('image/png');
-      pdf.addImage(imgData, 'PNG', 0, 0, widthPt, heightPt);
+      pdf.addImage(pngDataUrl, 'PNG', 0, 0, widthPt, heightPt);
       pdf.save(`${this.billNo()}.pdf`);
     } catch (error) {
       console.error('Error generating receipt PDF:', error);
@@ -389,6 +485,27 @@ export class BillingComponent implements OnInit {
     this.stampBottom.set('auto');
     this.stampLeft.set(`${randomLeft}%`);
     this.stampRotation.set(randomRot);
+  }
+
+  toggleCrumple(): void {
+    if (!this.isCrumpled()) {
+      const seed = Math.floor(Math.random() * 10000);
+      this.crumpleSeed.set(seed);
+      this.crumpleDeg1.set(Math.floor(Math.random() * 360));
+      this.crumpleDeg2.set(Math.floor(Math.random() * 360));
+      this.crumpleDeg3.set(Math.floor(Math.random() * 360));
+      
+      if (typeof document !== 'undefined') {
+        const texture = this.generateCrumpledTexture(400, 800, seed);
+        this.crumpleBg.set(texture);
+        const clip = this.generateClipPath(seed);
+        this.crumpleClip.set(clip);
+      }
+    } else {
+      this.crumpleBg.set('');
+      this.crumpleClip.set('none');
+    }
+    this.isCrumpled.set(!this.isCrumpled());
   }
 
   // ── New / Clear Bill ──────────────────────────────────────────────────────
@@ -411,7 +528,186 @@ export class BillingComponent implements OnInit {
     this.stampBottom.set('18%');
     this.stampLeft.set('28%');
     this.stampRotation.set(-16);
+    this.isCrumpled.set(false);
+    this.crumpleBg.set('');
+    this.crumpleClip.set('none');
 
     await this.initBillNo();
+  }
+
+  private generateCrumpledTexture(width: number, height: number, seed: number): string {
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return '';
+
+    // Base paper color (warm receipt tint)
+    ctx.fillStyle = '#FEFEFA';
+    ctx.fillRect(0, 0, width, height);
+
+    let randomVal = seed;
+    const random = () => {
+      const x = Math.sin(randomVal++) * 10000;
+      return x - Math.floor(x);
+    };
+
+    // 1. Draw subtle shading facets (large crumpled triangles for flat panels)
+    ctx.save();
+    ctx.filter = 'blur(60px)';
+    for (let i = 0; i < 7; i++) {
+      ctx.beginPath();
+      ctx.moveTo(random() * width, random() * height);
+      ctx.lineTo(random() * width, random() * height);
+      ctx.lineTo(random() * width, random() * height);
+      ctx.closePath();
+      ctx.fillStyle = random() > 0.5 
+        ? `rgba(0,0,0,${0.015 + random() * 0.025})` 
+        : `rgba(255,255,255,${0.03 + random() * 0.04})`;
+      ctx.fill();
+    }
+    ctx.restore();
+
+    // 2. Draw soft crease folds (connected network / triangulation to look organic)
+    ctx.save();
+    ctx.filter = 'blur(2.5px)';
+    
+    const numNodes = 14 + Math.floor(random() * 8);
+    const nodes: {x: number, y: number}[] = [];
+    for (let i = 0; i < numNodes; i++) {
+      nodes.push({
+        x: random() * width,
+        y: random() * height
+      });
+    }
+
+    // Connect nodes to their nearest neighbors
+    for (let i = 0; i < numNodes; i++) {
+      const nodeA = nodes[i];
+      const distances = nodes
+        .map((n, idx) => ({ idx, dist: Math.hypot(n.x - nodeA.x, n.y - nodeA.y) }))
+        .filter(d => d.idx !== i)
+        .sort((a, b) => a.dist - b.dist);
+
+      const connections = 2 + Math.floor(random() * 2);
+      for (let c = 0; c < Math.min(connections, distances.length); c++) {
+        const nodeB = nodes[distances[c].idx];
+        
+        if (i < distances[c].idx) {
+          const dx = nodeB.x - nodeA.x;
+          const dy = nodeB.y - nodeA.y;
+          const len = Math.sqrt(dx*dx + dy*dy);
+          if (len === 0) continue;
+          const nx = -dy / len;
+          const ny = dx / len;
+
+          // Shadow side (dark)
+          ctx.strokeStyle = `rgba(0, 0, 0, ${0.06 + random() * 0.06})`;
+          ctx.lineWidth = 0.8 + random() * 1.2;
+          ctx.beginPath();
+          ctx.moveTo(nodeA.x + nx * 1.5, nodeA.y + ny * 1.5);
+          ctx.lineTo(nodeB.x + nx * 1.5, nodeB.y + ny * 1.5);
+          ctx.stroke();
+
+          // Highlight side (white)
+          ctx.strokeStyle = `rgba(255, 255, 255, ${0.35 + random() * 0.35})`;
+          ctx.lineWidth = 0.8 + random() * 1.2;
+          ctx.beginPath();
+          ctx.moveTo(nodeA.x - nx * 1.5, nodeA.y - ny * 1.5);
+          ctx.lineTo(nodeB.x - nx * 1.5, nodeB.y - ny * 1.5);
+          ctx.stroke();
+        }
+      }
+    }
+    ctx.restore();
+
+    // 3. Draw micro-creases for fine texture details
+    ctx.save();
+    ctx.filter = 'blur(1px)';
+    const numMicroCreases = 12 + Math.floor(random() * 10);
+    for (let i = 0; i < numMicroCreases; i++) {
+      const x1 = random() * width;
+      const y1 = random() * height;
+      const length = 15 + random() * 35;
+      const angle = random() * Math.PI * 2;
+      const x2 = x1 + Math.cos(angle) * length;
+      const y2 = y1 + Math.sin(angle) * length;
+
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const len = Math.sqrt(dx*dx + dy*dy);
+      if (len === 0) continue;
+      const nx = -dy / len;
+      const ny = dx / len;
+
+      ctx.strokeStyle = `rgba(0, 0, 0, ${0.04 + random() * 0.04})`;
+      ctx.lineWidth = 0.5 + random() * 0.6;
+      ctx.beginPath();
+      ctx.moveTo(x1 + nx * 0.8, y1 + ny * 0.8);
+      ctx.lineTo(x2 + nx * 0.8, y2 + ny * 0.8);
+      ctx.stroke();
+
+      ctx.strokeStyle = `rgba(255, 255, 255, ${0.2 + random() * 0.25})`;
+      ctx.lineWidth = 0.5 + random() * 0.6;
+      ctx.beginPath();
+      ctx.moveTo(x1 - nx * 0.8, y1 - ny * 0.8);
+      ctx.lineTo(x2 - nx * 0.8, y2 - ny * 0.8);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // 4. Fine paper noise texture
+    const imgData = ctx.getImageData(0, 0, width, height);
+    const data = imgData.data;
+    for (let i = 0; i < data.length; i += 4) {
+      const noise = (random() - 0.5) * 4.5;
+      data[i] = Math.min(255, Math.max(0, data[i] + noise));
+      data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + noise));
+      data[i + 2] = Math.min(255, Math.max(0, data[i + 2] + noise));
+    }
+    ctx.putImageData(imgData, 0, 0);
+
+    return canvas.toDataURL('image/jpeg', 0.9);
+  }
+
+  private generateClipPath(seed: number): string {
+    let randomVal = seed;
+    const random = () => {
+      const x = Math.sin(randomVal++) * 10000;
+      return x - Math.floor(x);
+    };
+
+    const getWobble = (val: number, maxWobble = 0.8) => {
+      return val + (random() - 0.5) * maxWobble;
+    };
+
+    // Generate points along top, right, bottom, left to create a slightly wavy paper edge
+    const top = [
+      `0% ${getWobble(0)}%`,
+      `25% ${getWobble(0)}%`,
+      `50% ${getWobble(0)}%`,
+      `75% ${getWobble(0)}%`,
+      `100% ${getWobble(0)}%`
+    ];
+    const right = [
+      `${getWobble(100)}% 25%`,
+      `${getWobble(100)}% 50%`,
+      `${getWobble(100)}% 75%`,
+      `${getWobble(100)}% 100%`
+    ];
+    const bottom = [
+      `75% ${getWobble(100)}%`,
+      `50% ${getWobble(100)}%`,
+      `25% ${getWobble(100)}%`,
+      `0% ${getWobble(100)}%`
+    ];
+    const left = [
+      `${getWobble(0)}% 75%`,
+      `${getWobble(0)}% 50%`,
+      `${getWobble(0)}% 25%`
+    ];
+
+    const points = [...top, ...right, ...bottom, ...left];
+    return `polygon(${points.join(', ')})`;
   }
 }

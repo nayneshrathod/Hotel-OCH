@@ -169,7 +169,7 @@ export const MENU_ITEMS: MenuItem[] = [
   { id: 'CL004', name: 'Cold Drinks (1.5 Ltr.)', category: 'Cold Drinks', price: 95, unit: 'bottle', description: 'Chilled soft drink 1.5 Litre', isVeg: true, imageKeyword: 'cold drink' },
   { id: 'CL005', name: 'Cold Drinks (2 Ltr.)', category: 'Cold Drinks', price: 120, unit: 'bottle', description: 'Chilled soft drink 2 Litre', isVeg: true, imageKeyword: 'cold drink' },
   { id: 'CL006', name: 'Soda (500ml)', category: 'Cold Drinks', price: 30, unit: 'bottle', description: 'Chilled soda water 500ml', isVeg: true, imageKeyword: 'soda water' },
-  { id: 'CL007', name: 'Mineral Water', category: 'Cold Drinks', price: 25, unit: 'bottle', description: 'Packaged mineral water', isVeg: true, imageKeyword: 'mineral water bottle' },
+  { id: 'CL007', name: 'M Water', category: 'Cold Drinks', price: 19, unit: 'bottle', description: 'Packaged mineral water', isVeg: true, imageKeyword: 'mineral water bottle' },
   { id: 'CL008', name: 'Sweet Lassi', category: 'Cold Drinks', price: 40, unit: 'glass', description: 'Chilled sweet yogurt drink', isVeg: true, imageKeyword: 'sweet lassi' },
   { id: 'CL009', name: 'Butter Milk', category: 'Cold Drinks', price: 30, unit: 'glass', description: 'Chilled spiced chaas', isVeg: true, imageKeyword: 'buttermilk chaas' },
   { id: 'CL010', name: 'Dahi', category: 'Cold Drinks', price: 40, unit: 'bowl', description: 'Fresh set curd', isVeg: true, imageKeyword: 'fresh curd bowl' },

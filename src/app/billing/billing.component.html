@@ -92,6 +92,14 @@
         </svg>
         Stamp
       </button>
+      <button class="btn-nav btn-crumple no-print" (click)="toggleCrumple()" id="crumpleBillBtn"
+        [class.active]="isCrumpled()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 4h16v16H4z" />
+          <path d="M7 4l9 16M16 4L9 20" />
+        </svg>
+        Crumple
+      </button>
     </div>
   </header>
 
@@ -271,15 +279,22 @@
           Bill Details
         </h3>
         <div class="form-grid">
-          <div class="form-group">
-            <label for="tableNo">Table No.</label>
-            <input id="tableNo" type="text" placeholder="22-D" [ngModel]="tableNo()"
-              (ngModelChange)="tableNo.set($event)" class="form-input" />
+          <div class="form-group col-span-2"
+            style="display: flex; flex-direction: row; align-items: center; gap: 8px; margin-bottom: 4px;">
+            <input id="isParcel" type="checkbox" [ngModel]="isParcel()" (ngModelChange)="onParcelToggle($event)"
+              style="width: 16px; height: 16px; margin: 0; cursor: pointer;" />
+            <label for="isParcel" style="cursor: pointer; font-size: 11px; margin: 0; user-select: none;">Parcel /
+              Takeaway</label>
           </div>
           <div class="form-group">
+            <label for="tableNo">{{ isParcel() ? 'Parcel Boy' : 'Table No.' }}</label>
+            <input id="tableNo" type="text" [placeholder]="isParcel() ? 'Parcel' : '22-D'" [ngModel]="tableNo()"
+              (ngModelChange)="tableNo.set($event)" class="form-input" />
+          </div>
+          <div class="form-group" [style.opacity]="isParcel() ? '0.5' : '1'">
             <label for="empName">Emp. Name</label>
             <input id="empName" type="text" placeholder="NAFIS" [ngModel]="waiterName()"
-              (ngModelChange)="waiterName.set($event)" class="form-input" />
+              (ngModelChange)="waiterName.set($event)" class="form-input" [disabled]="isParcel()" />
           </div>
           <!-- Date and Time Modification Fields -->
           <div class="form-group col-span-2">
@@ -313,17 +328,42 @@
         Live Preview — Cash Memo
       </div>
 
-      <!-- ══ THERMAL RECEIPT (Print Target) ══ -->
-      <div class="receipt-wrapper print-area" id="printArea">
+      <div class="receipt-wrapper print-area" id="printArea" [class.crumpled-paper]="isCrumpled()"
+        [style.filter]="isCrumpled() ? 'url(#crumple-filter) contrast(0.95) brightness(0.98)' : 'none'"
+        [style.--crumple-bg]="crumpleBg() ? 'url(' + crumpleBg() + ')' : 'none'" [style.--crumple-clip]="crumpleClip()">
+
+        <svg width="0" height="0" style="position:absolute;z-index:-1;" aria-hidden="true">
+          <defs>
+            <filter id="crumple-filter" x="-10%" y="-10%" width="120%" height="120%">
+              <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" result="noise"
+                [attr.seed]="crumpleSeed()" />
+              <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.5" xChannelSelector="R" yChannelSelector="G"
+                result="displaced" />
+            </filter>
+          </defs>
+        </svg>
+
 
         <!-- Authentic Rubber Purple Stamp overlay (Bottom-Left Shifted) -->
         <div class="receipt-stamp" [style.top]="stampTop()" [style.bottom]="stampBottom()" [style.left]="stampLeft()"
           [style.transform]="'translate(-50%, 0) rotate(' + stampRotation() + 'deg)'">
-          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-            <!-- <circle cx="50" cy="50" r="42" stroke="#5753ac" stroke-width="3.5" fill="none" stroke-dasharray="0" /> -->
-            <circle cx="50" cy="50" r="35" stroke="#5753ac" stroke-width="3" fill="none" />
-            <text x="50" y="66" font-family="'Arial Black', Impact, sans-serif" font-size="44" font-weight="900"
-              fill="blue" text-anchor="middle">P</text>
+          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="opacity: 0.85;">
+            <defs>
+              <filter id="stamp-texture" x="-20%" y="-20%" width="140%" height="140%">
+                <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="4" result="noise" />
+                <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 4.5 -1.5" in="noise"
+                  result="speckles" />
+                <feComposite operator="in" in="SourceGraphic" in2="speckles" result="textured" />
+                <feTurbulence type="fractalNoise" baseFrequency="0.2" numOctaves="3" result="roughness" />
+                <feDisplacementMap in="textured" in2="roughness" scale="2" xChannelSelector="R" yChannelSelector="G" />
+              </filter>
+            </defs>
+            <g filter="url(#stamp-texture)">
+              <circle cx="50" cy="50" r="44" stroke="#3b3287" stroke-width="2.5" fill="none" />
+              <circle cx="49" cy="50.5" r="43.5" stroke="#3b3287" stroke-width="2" fill="none" />
+              <text x="51" y="78" font-family="'Arial Black', Impact, sans-serif" font-size="75" font-weight="900"
+                fill="#3b3287" text-anchor="middle">P</text>
+            </g>
           </svg>
         </div>
 
@@ -341,11 +381,19 @@
         <div class="receipt-meta">
           <div class="meta-col-left">
             <div class="meta-line">Date : {{ formattedDate() }}</div>
-            <div class="meta-line">T.No.: {{ tableNo() || '15-A' }}</div>
+            <div class="meta-line">
+              @if (isParcel()) {
+              P.Boy: {{ tableNo() || 'Parcel' }}
+              } @else {
+              T.No.: {{ tableNo() || '15-A' }}
+              }
+            </div>
           </div>
           <div class="meta-col-right">
             <div class="meta-line">Bill No. : {{ billNo().split('-').pop() }}</div>
+            @if (!isParcel()) {
             <div class="meta-line">Emp. No. : {{ waiterName() || 'Suraj' }}</div>
+            }
           </div>
         </div>
 
