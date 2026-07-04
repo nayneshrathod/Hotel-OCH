@@ -377,23 +377,32 @@
           <div class="receipt-dash-line">------------- Cash Memo -------------</div>
         </div>
 
-        <!-- META ROW (Double column aligned) -->
-        <div class="receipt-meta">
-          <div class="meta-col-left">
-            <div class="meta-line">Date : {{ formattedDate() }}</div>
-            <div class="meta-line">
-              @if (isParcel()) {
-              P.Boy: {{ tableNo() || 'Parcel' }}
-              } @else {
-              T.No.: {{ tableNo() || '15-A' }}
-              }
+        <!-- META SECTION (Row-based for perfect alignment) -->
+        <div class="receipt-meta-grid">
+          <!-- Row 1 -->
+          <div class="meta-grid-row">
+            <div class="meta-item-left">Date : {{ formattedDate() }}</div>
+            <div class="meta-item-right bill-no-container">
+              <span>Bill No. :</span>
+              <span class="receipt-bill-no-large">{{ billNo().split('-').pop() }}</span>
             </div>
           </div>
-          <div class="meta-col-right">
-            <div class="meta-line">Bill No. : {{ billNo().split('-').pop() }}</div>
-            @if (!isParcel()) {
-            <div class="meta-line">Emp. No. : {{ waiterName() || 'Suraj' }}</div>
-            }
+          <!-- Row 2 -->
+          <div class="meta-grid-row">
+            <div class="meta-item-left" style="display: flex; align-items: baseline; gap: 4px;">
+              @if (isParcel()) {
+              <span>P/Boy :</span>
+              <span class="bold_font">{{ tableNo() || 'Parcel' }}</span>
+              } @else {
+              <span>T.No.:</span>
+              <span class="bold_font">{{ tableNo() || '15-A' }}</span>
+              }
+            </div>
+            <div class="meta-item-right">
+              @if (!isParcel()) {
+              Emp. No. : {{ waiterName() || 'Suraj' }}
+              }
+            </div>
           </div>
         </div>
 

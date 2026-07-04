@@ -546,11 +546,7 @@ export class BillingComponent implements OnInit {
     ctx.fillStyle = '#FEFEFA';
     ctx.fillRect(0, 0, width, height);
 
-    let randomVal = seed;
-    const random = () => {
-      const x = Math.sin(randomVal++) * 10000;
-      return x - Math.floor(x);
-    };
+    const random = () => Math.random();
 
     // 1. Draw subtle shading facets (large crumpled triangles for flat panels)
     ctx.save();
@@ -671,11 +667,7 @@ export class BillingComponent implements OnInit {
   }
 
   private generateClipPath(seed: number): string {
-    let randomVal = seed;
-    const random = () => {
-      const x = Math.sin(randomVal++) * 10000;
-      return x - Math.floor(x);
-    };
+    const random = () => Math.random();
 
     const getWobble = (val: number, maxWobble = 0.8) => {
       return val + (random() - 0.5) * maxWobble;
